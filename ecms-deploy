@@ -1,0 +1,80 @@
+#!/bin/bash
+
+#check jdk and install jdk
+#yum search java|grep jdk
+#yum install java-1.8.0-openjdk.x86_64 -y
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ "$NETWORKING" = "no" ] && exit 0
+
+app_home=$(pwd)
+pid=0
+app_name='ecms.jar'
+cmd="nohup java -jar $app_name --spring.config.location=application.yml >/dev/null 2>&1 &"
+user='root'
+chk_jdk(){
+   env=$(command -v java)
+   
+   if [ -z "$env" ];then
+      echo "jdk environment not exist,please install jdk8.."
+      exit 0
+   fi
+}
+chk_pid(){
+  if [ -f "$app_home/ecms.pid" ];then
+       pid=$(cat "$app_home"/ecms.pid)
+   else
+       pid=$(ps -ef |grep $app_name |grep -v grep |awk '{print $2}')
+   fi
+}
+
+start(){
+   chk_jdk
+   chk_pid
+   if [ -n "$pid" ];then
+     echo "$app_name is runing PID: $pid "
+   else
+     eval "$cmd"
+     echo "---------------------------------"
+     echo "启动完成>>>>>"
+     echo "---------------------------------"
+     sleep 2s
+   fi
+}
+
+stop(){
+    chk_pid
+    if [ -z "$pid" ]; then
+     echo "$app_name not runing"
+    else
+      echo "$app_name stop..."
+      kill -9 "$pid"
+    fi 
+}
+
+restart(){
+    stop 
+    sleep 1s
+    start
+}
+status(){
+     chk_pid
+    if [ -z "$pid" ]; then
+     	echo "$app_name not runing"
+    else
+        echo "$app_name runing PID: $pid"
+    fi 
+}
+case $1 in  
+         start)  $1;;  
+          stop)  $1;; 
+       restart)  $1;;  
+        status)  $1;;   
+             *)  echo "require start|stop|restart|status"  ;;  
+esac
